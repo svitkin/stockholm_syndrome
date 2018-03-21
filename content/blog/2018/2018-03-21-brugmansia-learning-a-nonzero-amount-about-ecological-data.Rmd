@@ -1,0 +1,56 @@
+---
+title: "Brugmansia: Learning a nonzero amount about ecological data"
+date: "2018-03-21"
+slug: "Brugmansia-Learning-a-Nonzero-Amount-About-Ecological-Data"
+---
+
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(cache = TRUE, 
+                      warning = FALSE, 
+                      message = FALSE, 
+                      echo = TRUE, 
+                      dpi = 180, 
+                      cache.lazy = FALSE)
+library(BIEN)
+library(dplyr)
+library(ape)
+library(maps)
+library(sp)
+library(stringr)
+```
+
+
+## Introduction
+This post is inspired by the imbalance of my interest in the field of ecology and my understanding of it. Because I have some knowledge of statistics and programming (the work I do is occasionally referred to as "data science" by people less resentful than me), I thought I would do some simplistic data stuff! I'm going to assume anyone reading this has as much knowledge of ecology as I do (i.e. they read a book about it years ago that they liked very much).
+
+## Brugmansia
+I chose to focus on the plant genus (the step above species in taxonomic rank) [Brugmansia](https://en.wikipedia.org/wiki/Brugmansia) for my exploration. It has a really interesting and complicated history worth checking out!
+
+## Obtaining Data
+**Insert information about BIEN**
+  
+``` {r import-data}
+brugmansia_data <- 
+  BIEN_occurrence_genus(genus = "Brugmansia",
+                        cultivated = TRUE,
+                        only.new.world = FALSE,
+                        all.taxonomy = TRUE,
+                        native.status = TRUE,
+                        observation.type = TRUE,
+                        political.boundaries = TRUE) %>% 
+  filter(!is.na(latitude),
+         !is.na(longitude),
+         !is.na(date_collected))
+
+brugmansia_data_col <-
+  brugmansia_data %>% 
+  filter(country == "Colombia")
+
+map("world", fill = TRUE, col = "grey", bg = "light blue")
+points(cbind(brugmansia_data$longitude,
+             brugmansia_data$latitude),
+       col = "red", pch = 20, cex = 1)
+
+```

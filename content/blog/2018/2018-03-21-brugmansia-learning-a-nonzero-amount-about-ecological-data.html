@@ -1,0 +1,41 @@
+---
+title: "Brugmansia: Learning a nonzero amount about ecological data"
+date: "2018-03-21"
+slug: "Brugmansia-Learning-a-Nonzero-Amount-About-Ecological-Data"
+---
+
+
+
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p>This post is inspired by the imbalance of my interest in the field of ecology and my understanding of it. Because I have some knowledge of statistics and programming (the work I do is occasionally referred to as “data science” by people less resentful than me), I thought I would do some simplistic data stuff! I’m going to assume anyone reading this has as much knowledge of ecology as I do (i.e. they read a book about it years ago that they liked very much).</p>
+</div>
+<div id="brugmansia" class="section level2">
+<h2>Brugmansia</h2>
+<p>I chose to focus on the plant genus (the step above species in taxonomic rank) <a href="https://en.wikipedia.org/wiki/Brugmansia">Brugmansia</a> for my exploration. It has a really interesting and complicated history worth checking out!</p>
+</div>
+<div id="obtaining-data" class="section level2">
+<h2>Obtaining Data</h2>
+<p><strong>Insert information about BIEN</strong></p>
+<pre class="r"><code>brugmansia_data &lt;- 
+  BIEN_occurrence_genus(genus = &quot;Brugmansia&quot;,
+                        cultivated = TRUE,
+                        only.new.world = FALSE,
+                        all.taxonomy = TRUE,
+                        native.status = TRUE,
+                        observation.type = TRUE,
+                        political.boundaries = TRUE) %&gt;% 
+  filter(!is.na(latitude),
+         !is.na(longitude),
+         !is.na(date_collected))
+
+brugmansia_data_col &lt;-
+  brugmansia_data %&gt;% 
+  filter(country == &quot;Colombia&quot;)
+
+map(&quot;world&quot;, fill = TRUE, col = &quot;grey&quot;, bg = &quot;light blue&quot;)
+points(cbind(brugmansia_data$longitude,
+             brugmansia_data$latitude),
+       col = &quot;red&quot;, pch = 20, cex = 1)</code></pre>
+<p><img src="/vibrant-ritchie-fd2063.netlify.comblog/2018/2018-03-21-brugmansia-learning-a-nonzero-amount-about-ecological-data_files/figure-html/import-data-1.png" width="1260" /></p>
+</div>
