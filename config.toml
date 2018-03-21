@@ -49,6 +49,6 @@ github = "//github.com/svitkin"
 email = "svitkin@u.rochester.edu"
 linkedin = "//linkedin.com/in/sol-vitkin-351237114/"
 posts_navigation = true
-avatar = "img/profile.jpeg" # path to image in static dir e.g img/avatar.png (do not use in the same time as gravatar)
+avatar = "img/profile.png" # path to image in static dir e.g img/avatar.png (do not use in the same time as gravatar)
 noshowreadtime = true
 selfintro = ""
