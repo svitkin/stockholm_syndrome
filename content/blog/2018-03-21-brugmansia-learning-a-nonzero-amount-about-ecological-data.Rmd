@@ -48,9 +48,9 @@ brugmansia_data_col <-
   brugmansia_data %>% 
   filter(country == "Colombia")
 
-map("world", fill = TRUE, col = "grey", bg = "light blue")
-points(cbind(brugmansia_data$longitude,
-             brugmansia_data$latitude),
-       col = "red", pch = 20, cex = 1)
+# map("world", fill = TRUE, col = "grey", bg = "light blue")
+# points(cbind(brugmansia_data$longitude,
+#              brugmansia_data$latitude),
+#        col = "red", pch = 20, cex = 1)
 
 ```
