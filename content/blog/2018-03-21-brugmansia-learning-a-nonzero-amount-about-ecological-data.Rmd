@@ -25,7 +25,7 @@ library(stringr)
 ## Introduction
 This post is inspired by the imbalance of my interest in the field of ecology and my understanding of it. So I thought I would do some simplistic data stuff as an initial introduction into the world. I'm going to assume anyone reading this has as much knowledge of ecology as I do (i.e. they read a book about it years ago that they liked very much).
 
-I chose to focus my foray on the plant genus (the step above species in taxonomic rank) [Brugmansia](https://en.wikipedia.org/wiki/Brugmansia) for my exploration. It has a really interesting and complicated history worth checking out!
+I chose to focus my exploration on the plant genus (the step above species in taxonomic rank) [Brugmansia](https://en.wikipedia.org/wiki/Brugmansia), specifically in the country of Colombia. Brugmansia has a really interesting and complicated history worth digging into.
 
 ## Obtaining Data
 **Insert information about BIEN**
