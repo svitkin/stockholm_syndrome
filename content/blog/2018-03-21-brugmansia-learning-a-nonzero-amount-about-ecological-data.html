@@ -2,6 +2,7 @@
 title: "Brugmansia: Learning a nonzero amount about ecological data"
 date: "2018-03-21"
 slug: "Brugmansia-Learning-a-Nonzero-Amount-About-Ecological-Data"
+draft: true
 ---
 
 
@@ -33,8 +34,9 @@ brugmansia_data_col &lt;-
   brugmansia_data %&gt;% 
   filter(country == &quot;Colombia&quot;)
 
-# map(&quot;world&quot;, fill = TRUE, col = &quot;grey&quot;, bg = &quot;light blue&quot;)
-# points(cbind(brugmansia_data$longitude,
-#              brugmansia_data$latitude),
-#        col = &quot;red&quot;, pch = 20, cex = 1)</code></pre>
+map(&quot;world&quot;, fill = TRUE, col = &quot;grey&quot;, bg = &quot;light blue&quot;)
+points(cbind(brugmansia_data$longitude,
+             brugmansia_data$latitude),
+       col = &quot;red&quot;, pch = 20, cex = 1)</code></pre>
+<p><img src="/blog/2018-03-21-brugmansia-learning-a-nonzero-amount-about-ecological-data_files/figure-html/import-data-1.png" width="1260" /></p>
 </div>

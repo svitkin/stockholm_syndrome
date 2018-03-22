@@ -1,4 +1,4 @@
-baseurl = "vibrant-ritchie-fd2063.netlify.com"
+baseurl = "/"
 languageCode = "en-us"
 title = "Stockholm Syndrome"
 theme = "cocoa-hugo-theme"
