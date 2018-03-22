@@ -32,7 +32,9 @@ draft: true
 <div id="obtaining-data" class="section level2">
 <h2>Obtaining Data</h2>
 <p><strong>Insert information about BIEN</strong></p>
-<pre class="r"><code>brugmansia_data &lt;- 
+<pre class="r"><code># Send query to BIEN database and
+# only keep records with valid latitude, longitude, and date collected
+brugmansia_data &lt;- 
   BIEN_occurrence_genus(genus = &quot;Brugmansia&quot;,
                         cultivated = TRUE,
                         only.new.world = FALSE,
@@ -44,10 +46,12 @@ draft: true
          !is.na(longitude),
          !is.na(date_collected))
 
+# Restrict queried data to only records occuring in Colombia
 brugmansia_data_col &lt;-
   brugmansia_data %&gt;% 
   filter(country == &quot;Colombia&quot;)
 
+# Create map of Brugmansia occurence in Colombia
 leaflet(data = brugmansia_data_col,
         width = 750,
         height = 500) %&gt;% 

@@ -30,7 +30,10 @@ I chose to focus my exploration on the plant genus (the step above species in ta
 ## Obtaining Data
 **Insert information about BIEN**
   
-``` {r import-data}
+``` {r import-data-and-map}
+
+# Send query to BIEN database and
+# only keep records with valid latitude, longitude, and date collected
 brugmansia_data <- 
   BIEN_occurrence_genus(genus = "Brugmansia",
                         cultivated = TRUE,
@@ -43,10 +46,12 @@ brugmansia_data <-
          !is.na(longitude),
          !is.na(date_collected))
 
+# Restrict queried data to only records occuring in Colombia
 brugmansia_data_col <-
   brugmansia_data %>% 
   filter(country == "Colombia")
 
+# Create map of Brugmansia occurence in Colombia
 leaflet(data = brugmansia_data_col,
         width = 750,
         height = 500) %>% 
