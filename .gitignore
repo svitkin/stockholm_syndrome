@@ -6,3 +6,4 @@ blogdown
 .DS_Store
 Thumbs.db
 public/
+content/blog/data-files/dc-housing/data-raw/Integrated_Tax_System_Public_Extract.csv

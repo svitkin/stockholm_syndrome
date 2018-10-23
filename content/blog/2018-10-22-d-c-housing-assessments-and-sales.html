@@ -1,0 +1,51 @@
+---
+title: 'D.C. Housing: Assessments and Sales'
+author: ''
+date: '2018-10-22'
+slug: d-c-housing-assessments-and-sales
+draft: true
+categories: []
+tags: []
+---
+
+
+
+<p>Hello World! This is my first (hopefully of many) data-related blogposts. I hope it does not intensely bore you (and if it does, then I hope you it helps you fall asleep), and you learn something new or get excited by this and future topics. Alright alright alright.</p>
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p>Inspired by the wonderful book on Chicago’s real estate in the decades after WWII, <a href="https://www.amazon.com/gp/product/0805091424/ref=dbs_a_def_rwt_bibl_vppi_i0">Family Properties</a>, and the recent work done at the D.C. Policy Center on the <a href="https://www.dcpolicycenter.org/publications/taking-stock-full-report/">District’s housing stock</a>, I decided to do my own exploration of D.C.’s real estate market. Urban real estate is an incredibly complex system of interactions between public policy, economic changes, immigration and migration, social interaction, and many other facets of human society and the human experience. This analysis will be focusing on a very small sliver of all that.</p>
+<p>After reading about the dual housing market in Chicago for African-Americans and white Americans in Family Properties, I began thinking about numeric quantities that captured this disparity. One of the more striking signals of this dual housing market was the difference between the assessed value for a property and the much higher total sales price paid on contract by African-Americans. Looking at D.C.’s real estate landscape, there are no obvious candidate data sets to find any such discrepancies by race, for many reasons. For one, the race of buyers is not reported in sales records. Additionally, anything marking a property as being bought on contract in a system akin to the contract sales system in post-WWII Chicago is not reported. However, we can still try to parse out any systematic reasons for differences between these two quantities across other dimensions, and hopefully build a framework for further work.</p>
+</div>
+<div id="data" class="section level2">
+<h2>Data</h2>
+<p>The city of Washington, D.C. has a fantastic <a href="https://dc.gov/page/open-data">open data portal</a>, with data on the assessment process and the real estate market. The work done in this post relies on:</p>
+<ul>
+<li><a href="opendata.dc.gov/datasets/integrated-tax-system-public-extract">Real property tax assessment database</a> which provides information on the assessed value of a property, sales price, sales date, property type and use, and tax class</li>
+<li>Computer Assisted Mass Apraisal (CAMA) data for <a href="opendata.dc.gov/datasets/computer-assisted-mass-appraisal-residential">residential units</a>, <a href="http://opendata.dc.gov/datasets/d6c70978daa8461992658b69dccb3dbf_24">condominiums</a>, and <a href="http://opendata.dc.gov/datasets/e53572ef8f124631b965709da8200167_23">commercial property</a></li>
+<li>Scraped data from the <a href="https://www.taxpayerservicecenter.com/RP_Search.jsp?search_type=Sales">Office of Tax and Revenue (OTR)</a></li>
+<li>The methodology from:
+<ul>
+<li><a href="https://www.dcpolicycenter.org/publications/taking-stock-full-report/">D.C. Policy Center’s Taking Stock of the District’s Housing Stock: Capacity, Affordability and Pressures on Family Housing</a></li>
+<li><a href="https://otr.cfo.dc.gov/sites/default/files/dc/sites/otr/publication/attachments/Final%20TY2018%20ARM.pdf">OTR’s 2018 Appraiser’s Reference Materials</a></li>
+<li><a href="https://otr.cfo.dc.gov/sites/default/files/dc/sites/otr/publication/attachments/FY%202018%20Assessment%20Ratio%20Report_.pdf">OTR’s 2018 Assessment Ratio Report</a></li>
+</ul></li>
+</ul>
+<div id="scraping" class="section level3">
+<h3>Scraping</h3>
+<p>Our goal being to understand why there might be a difference between the assessed value of a property and its sales price, we want to account for variation in this difference that comes from different assessors. Data on who assessed a property is not available in the public extract of the Real property tax assessment database. However, using the unique identifier for each property (SSL number), you can crawl through OTR’s property search and find the assessor associated with each assessment. Although their names are public record, in the final data set the names of the assessors are censored and recorded as a categorical numeric variable.</p>
+</div>
+<div id="cleaning" class="section level3">
+<h3>Cleaning</h3>
+<p><a href="https://otr.cfo.dc.gov/sites/default/files/dc/sites/otr/publication/attachments/FY%202018%20Assessment%20Ratio%20Report_.pdf">OTR’s 2018 Assessment Ratio Report</a> uses sales completed from January 1, 2016 to December 31, 2016 for its comparison of sales prices and assessment values. This analysis extends to sales completed through 2017 as well.</p>
+<p>2016-2017; more than one record; use code, sales date, and land area difference; commercial?; no heat description; no tax class type; no info on rooms or 0 rooms; 0 bedrooms; 47 bedrooms</p>
+</div>
+</div>
+<div id="quantifying-and-modeling-difference" class="section level2">
+<h2>Quantifying and Modeling Difference</h2>
+</div>
+<div id="an-aside-sanford-capital" class="section level2">
+<h2>An aside: Sanford Capital</h2>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+</div>

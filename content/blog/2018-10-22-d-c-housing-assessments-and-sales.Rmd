@@ -1,0 +1,348 @@
+---
+title: 'D.C. Housing: Assessments and Sales'
+author: ''
+date: '2018-10-22'
+slug: d-c-housing-assessments-and-sales
+draft: true
+categories: []
+tags: []
+---
+
+
+``` {r setup, include = FALSE}
+library(knitr)
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      echo = TRUE, 
+                      dpi = 180)
+                      
+library(stpiR)
+library_or_install(dplyr,
+                   tidyr,
+                   stringr,
+                   rvest,
+                   purrr,
+                   ggplot2,
+                   plotly,
+                   skimr,
+                   rvest,
+                   RSelenium)
+                   
+        
+```
+
+
+``` {r load-data, include = FALSE}
+
+
+appraisal_data <- 
+  map_df(c("../blog/data-files/dc-housing/data-raw/Computer_Assisted_Mass_Appraisal__Residential.csv",
+           "../blog/data-files/dc-housing/data-raw/Computer_Assisted_Mass_Appraisal__Commercial.csv",
+           "../blog/data-files/dc-housing/data-raw/Computer_Assisted_Mass_Appraisal__Condominium.csv"),
+         function(filename) {
+           
+           read.csv(filename,
+                    stringsAsFactors = FALSE) %>% 
+             clean_names() %>% 
+             mutate_at(vars(matches("extwall")), as.character) %>% 
+             mutate(ssl = str_replace(ssl, " +", " "),
+                    property_type = str_replace_all(str_replace_all(str_extract(filename, "__.+\\."), 
+                                                                    "_", ""),
+                                                    "\\.", ""))
+         }) %>% 
+  mutate(bathrm_combined = bathrm + (hf_bathrm * 0.5))
+
+
+# TODO: Assumption assessment is FY2018 assessment; in which case 2016 and 2017 sales should be most relevant for investigation; maybe add 2018 too
+assessment_data <-
+  read.csv("../blog/data-files/dc-housing/data-raw/Integrated_Tax_System_Public_Extract.csv",
+           stringsAsFactors = FALSE) %>% 
+  clean_names()
+
+assessment_data_recent <- 
+  assessment_data %>% 
+  mutate(sales_year = as.numeric(str_extract(saledate, "^\\d{4}"))) %>% 
+  filter(sales_year %in% c(2016, 2017),
+         usecode %in% c(1, 11, 12, 13, 15, 16, 17, 19, 21, 22, 23, 24, 25, 26, 29),
+         acceptcode == "MARKET"
+         # acceptcode %!in% c("", "BUYER=SELLER", "FORECLOSURE", "GOVT PURCHASE", "MISC", "TAX DEED",
+         #                         "M5 MULTI-FORECLOSURE", "M6 MULTI-GOVT PURCHASE")
+  )
+
+
+# Scrape more data from assessment site -----------------------------------------
+#  scrape_assessments <- function(housing_df) {
+#   filename <- file.path("data", "scrape_assessment_data.csv")
+#   
+#   if (file.exists(filename)) {
+#     read.csv(filename, stringsAsFactors = FALSE)
+#   } else {
+#     scrape_list <- list()
+#     ssl_done <- c()
+#     rD <- rsDriver(port = 4567L, browser = "chrome")
+#     remDr <- rD[["client"]]
+#     remDr$navigate("https://www.taxpayerservicecenter.com/RP_Search.jsp?search_type=Sales")
+#     
+#     get_tbl_txt <- function(selector) remDr$findElement("css", selector)$getElementText()[[1]]
+#     scrape_ssl <- function(ssl) {
+#       base_site <- "https://www.taxpayerservicecenter.com/RP_Detail.jsp?ssl="
+#       ssl_html <- str_replace(ssl, " ", "%20")
+#       remDr$navigate(str_c(base_site, ssl_html))
+#       
+#       asrname <-
+#         get_tbl_txt("#form1 > table > tbody > tr:nth-child(3) > td > table > tbody > tr:nth-child(6) > td.RPRowData")
+#       
+#       data.frame(ssl = ssl,
+#                  asrname = asrname,
+#                  stringsAsFactors = FALSE)
+#       
+#     }
+#     
+#     for (ssl in housing_df[["ssl"]]) {
+#       message(ssl, "\n",
+#               round((which(housing_df$ssl == ssl)/length(housing_df$ssl)) * 100, 2), "% done")
+#       
+#       while(ssl %!in% ssl_done) {
+#         try({
+#           scrape_list[[length(scrape_list)+1]] <- scrape_ssl(ssl)
+#           ssl_done <- c(ssl_done, ssl)
+#         })
+#       }
+#       
+#     }
+#     remDr$close()
+#     
+#     scrape_df <- bind_rows(scrape_list)
+#     write.csv(scrape_df, filename, row.names = FALSE)
+#     scrape_df
+#   }
+# }
+
+# scraped_asmnt_data <- scrape_assessments(assessment_data_recent)
+
+
+```
+
+``` {r clean-data, include = FALSE}
+# Convert everything in tax scrape to 2018 dollars
+# Use simple first cpi of each year to account for inflation
+scrape_cpi <- function() {
+  
+  cache_name <- file.path("../blog/data-files/dc-housing/data", 
+                          "cpi_dc.csv")
+  
+  if (file.exists(cache_name)) {
+    read.csv(cache_name, stringsAsFactors = FALSE)
+  } else {
+    cpi_dc <-
+      read_html("https://www.bls.gov/regions/mid-atlantic/data/consumerpriceindexhistorical_washingtondc_table.htm") %>% 
+      html_nodes("#ro3fxwasu_cms") %>% 
+      html_table(fill = TRUE) %>% 
+      `[[`(1)
+    
+    colnames(cpi_dc) <- cpi_dc[1, ]
+    start_row <- which(cpi_dc[,1] == "Consumer Price Index") + 1
+    end_row <- which(cpi_dc[,1] == "Percent change from  12 months ago") - 2
+    cpi_dc <- 
+      slice(cpi_dc, start_row:end_row) %>% 
+      clean_names()
+    
+    write.csv(cpi_dc, cache_name, row.names = FALSE)
+    cpi_dc
+  }
+  
+}
+
+cpi_table <- scrape_cpi()
+
+# TODO: Assumes we want 2018 real dollars; may or not be fair depending on assessment date
+find_multiplier <- function(cpi_table, yr) {
+  cpi_table %>% 
+    filter(all_items_1982_84_100 == 2018) %>% 
+    pull(jan) %>% 
+    as.numeric() %>% 
+    prod(1/(cpi_table %>% filter(all_items_1982_84_100 == yr) %>% pull(jan) %>% as.numeric))
+}
+
+multi_2016 <- find_multiplier(cpi_table, 2016)
+multi_2017 <- find_multiplier(cpi_table, 2017)
+
+
+# TODO: dollars per sq foot?
+# TODO: check consistency with scraped data (for 2017 records at least)
+# Read in nbhood name conversions
+nbhd_names <- read.csv("../blog/data-files/dc-housing/data-raw/nbhd-name-table.csv", stringsAsFactors = FALSE)
+cleaned_assessment_data <-
+  assessment_data_recent %>% 
+  mutate(
+    cpi_saleprice =
+      case_when(
+        sales_year == 2016 ~ saleprice * multi_2016,
+        sales_year == 2017 ~ saleprice * multi_2017),
+    ssl = str_replace(ssl, " +", " "),
+    ass_sales_ratio = assessment/cpi_saleprice) %>% 
+  left_join(nbhd_names)
+
+cleaned_cama_data <-
+  appraisal_data %>% 
+  mutate(cama_sales_year = as.numeric(str_extract(saledate, "^\\d{4}"))) %>% 
+  filter(cama_sales_year %in% c(2016, 2017)) %>% 
+  mutate(cpi_cama_price =
+           case_when(
+             cama_sales_year == 2016 ~ price * multi_2016,
+             cama_sales_year == 2017 ~ price * multi_2017)
+  ) %>% 
+  # Remove cama entries with more than one ssl (no discernible way to combine or choose correct match)
+  group_by(ssl) %>% 
+  mutate(n = n()) %>% 
+  ungroup() %>% 
+  filter(n == 1) %>% 
+  select(-n)
+```
+
+``` {r combine-data, include = FALSE}
+
+combined_housing_df <- 
+  cleaned_assessment_data %>% 
+  left_join(cleaned_cama_data, by = "ssl") %>% 
+  mutate(log_ass_sales_ratio = log(ass_sales_ratio),
+         # Can pick different reference level, AU seems to be steady market
+         nbhd_name = relevel(factor(nbhd_name), ref = "American University")) %>% 
+  filter(usecode.x == usecode.y, # 35 observations removed
+         saledate.x == saledate.y, # 2 observations removed
+         landarea.x == landarea.y, # 0 observations removed
+         property_type != "Commercial", # 106 observations removed
+         heat != 0, # 28 observations removed
+         !is.na(classtype), # 3 observations removed
+         !is.na(rooms) & rooms != 0, # 57 observations removed
+         bedrm != 0, #558 observations removed
+         bedrm != 47 # 1 observation removed
+  ) %>% 
+  mutate(eh = assessment - cpi_saleprice) 
+
+
+# AYB is when main building portion was built
+# EYB is the calculated or apparent year, that an improvement was built that is most often more recent than actual year built.
+
+# Keep rooms?
+# What do you do with places that say they have 0 bedrooms
+
+
+
+```
+
+``` {r summaries, include = FALSE}
+
+# TODO: should combine to get assessor name too?
+group_skims <-
+  lapply(c("qdrntname", "nbhd", "saletype", "acceptcode", "proptype"),
+         function(var) {
+           message(var)
+           var_quo <- enquo(var)
+           combined_housing_df %>%
+             select(!!var_quo, ass_sales_ratio, assessment, saleprice) %>% 
+             group_by_(var) %>% 
+             skim_to_wide()
+         })
+
+group_skims[[length(group_skims) + 1]] <-
+  combined_housing_df %>% 
+  select(ownername, ass_sales_ratio, assessment, saleprice) %>% 
+  group_by(ownername) %>% 
+  mutate(n = n()) %>% 
+  filter(n > 1) %>% 
+  select(-n) %>% 
+  skim_to_wide()
+
+
+names(group_skims) <- c("qdrntname", "nbhd", "saletype", "acceptcode", "proptype", "ownername")
+
+group_skim_vars <- 
+  lapply(group_skims, 
+         function(df) {
+           df_list <- 
+             lapply(unique(df[["variable"]]),
+                    function(var) {
+                      
+                      df %>% 
+                        filter(variable == var)
+                      
+                    })
+           
+           names(df_list) <- unique(df[["variable"]])
+           df_list
+         })
+
+
+
+```
+
+``` {r models, include = FALSE}
+# TODO: Sanford capital investigation?
+
+# Check summary of regression data
+# combined_housing_df %>% 
+#   filter(!is.na(bedrm) & !is.na(bathrm) & !is.na(eyb) & !is.na(heat_d)) %>% nrow() %>% 
+#   nrow()
+# pull(property_type) %>% 
+#   unique()
+
+plot_var_relationship <- function(var) {
+  
+  var_quo <- enquo(var)
+  print(ggplot(combined_housing_df, aes(!!var_quo, log(cpi_saleprice))) +
+          geom_point() +
+          geom_smooth())
+  print(ggplot(combined_housing_df, aes(!!var_quo, log(assessment))) +
+          geom_point() +
+          geom_smooth())
+  
+}
+
+mdl_sales <-
+  lm(log(cpi_saleprice) ~ nbhd_name + bedrm + bathrm + factor(usecode.x) + landarea.x + eyb + heat_d + factor(classtype),
+     data = combined_housing_df)
+
+mdl_asmnt <-
+  lm(log(assessment) ~ nbhd_name + bedrm + bathrm + factor(usecode.x) + landarea.x + eyb + heat_d + factor(classtype),
+     data = combined_housing_df)
+
+```
+
+
+Hello World! This is my first (hopefully of many) data-related blogposts. I hope it does not intensely bore you (and if it does, then I hope you it helps you fall asleep), and you learn something new or get excited by this and future topics. Alright alright alright.
+
+## Introduction
+
+Inspired by the wonderful book on Chicago's real estate in the decades after WWII, [Family Properties](https://www.amazon.com/gp/product/0805091424/ref=dbs_a_def_rwt_bibl_vppi_i0), and the recent work done at the D.C. Policy Center on the [District's housing stock](https://www.dcpolicycenter.org/publications/taking-stock-full-report/), I decided to do my own exploration of D.C.'s real estate market. Urban real estate is an incredibly complex system of interactions between public policy, economic changes, immigration and migration, social interaction, and many other facets of human society and the human experience. This analysis will be focusing on a very small sliver of all that.
+
+After reading about the dual housing market in Chicago for African-Americans and white Americans in Family Properties, I began thinking about numeric quantities that captured this disparity. One of the more striking signals of this dual housing market was the difference between the assessed value for a property and the much higher total sales price paid on contract by African-Americans. Looking at D.C.'s real estate landscape, there are no obvious candidate data sets to find any such discrepancies by race, for many reasons. For one, the race of buyers is not reported in sales records. Additionally, anything marking a property as being bought on contract in a system akin to the contract sales system in post-WWII Chicago is not reported. However, we can still try to parse out any systematic reasons for differences between these two quantities across other dimensions, and hopefully build a framework for further work.
+
+## Data
+
+The city of Washington, D.C. has a fantastic [open data portal](https://dc.gov/page/open-data), with data on the assessment process and the real estate market. The work done in this post relies on:
+
+  * [Real property tax assessment database](opendata.dc.gov/datasets/integrated-tax-system-public-extract) which provides information on the assessed value of a property, sales price, sales date, property type and use, and tax class
+  * Computer Assisted Mass Apraisal (CAMA) data for [residential units](opendata.dc.gov/datasets/computer-assisted-mass-appraisal-residential), [condominiums](http://opendata.dc.gov/datasets/d6c70978daa8461992658b69dccb3dbf_24), and [commercial property](http://opendata.dc.gov/datasets/e53572ef8f124631b965709da8200167_23)
+  * Scraped data from the [Office of Tax and Revenue (OTR)](https://www.taxpayerservicecenter.com/RP_Search.jsp?search_type=Sales)
+  * The methodology from:
+    * [D.C. Policy Center's Taking Stock of the District’s Housing Stock: Capacity, Affordability and Pressures on Family Housing](https://www.dcpolicycenter.org/publications/taking-stock-full-report/)
+    * [OTR's 2018 Appraiser's Reference Materials](https://otr.cfo.dc.gov/sites/default/files/dc/sites/otr/publication/attachments/Final%20TY2018%20ARM.pdf)
+    * [OTR's 2018 Assessment Ratio Report](https://otr.cfo.dc.gov/sites/default/files/dc/sites/otr/publication/attachments/FY%202018%20Assessment%20Ratio%20Report_.pdf)
+
+### Scraping
+
+Our goal being to understand why there might be a difference between the assessed value of a property and its sales price, we want to account for variation in this difference that comes from different assessors. Data on who assessed a property is not available in the public extract of the Real property tax assessment database. However, using the unique identifier for each property (SSL number), you can crawl through OTR's property search and find the assessor associated with each assessment. Although their names are public record, in the final data set the names of the assessors are censored and recorded as a categorical numeric variable.
+
+### Cleaning
+
+[OTR's 2018 Assessment Ratio Report](https://otr.cfo.dc.gov/sites/default/files/dc/sites/otr/publication/attachments/FY%202018%20Assessment%20Ratio%20Report_.pdf) uses sales completed from January 1, 2016 to December 31, 2016 for its comparison of sales prices and assessment values. This analysis extends to sales completed through 2017 as well.
+
+2016-2017; more than one record; use code, sales date, and land area difference; commercial?; no heat description; no tax class type; no info on rooms or 0 rooms; 0 bedrooms; 47 bedrooms
+
+## Quantifying and Modeling Difference
+
+## An aside: Sanford Capital
+
+## Conclusion
+
